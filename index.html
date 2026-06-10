@@ -146,9 +146,9 @@
             <div class="glass p-4 rounded-2xl h-72" id="chart-ponderados"></div>
         </div>
         
-        <!-- Contenedor del gráfico de ranking a ancho completo -->
+        <!-- Contenedor del gráfico de ranking a ancho completo con altura reducida -->
         <div class="glass p-4 rounded-2xl mb-6 shadow-sm border border-stone-200 w-full">
-            <div id="chart-ranking-planteles" style="width: 100%; min-height: 550px;"></div>
+            <div id="chart-ranking-planteles" style="width: 100%; min-height: 200px;"></div>
         </div>
 
         <!-- Tabla principal -->
@@ -438,7 +438,7 @@
                  type:'bar', marker:{color:['#8b5cf6','#06b6d4','#f97316']}, text: [(proms.pu/count).toFixed(1), (proms.se/count).toFixed(1), (proms.pr/count).toFixed(1)], textposition:'auto'}
             ], {title:'Promedios Ponderados (General)', ...conf});
             
-            // RANKING DE PLANTELES - GRÁFICO DE BARRAS VERTICALES A ANCHO COMPLETO
+            // RANKING DE PLANTELES - GRÁFICO DE BARRAS VERTICALES A ANCHO COMPLETO CON ALTURA REDUCIDA
             const plantAvg = {};
             let tituloGrafico = '';
             
@@ -477,10 +477,11 @@
             
             const barColors = ranking.map(r => r.avg < 6 ? '#ef4444' : (r.avg < 7 ? '#f59e0b' : '#10b981'));
             
-            // Calcular altura dinámica según cantidad de planteles (más planteles = más altura)
-            const dynamicHeight = Math.max(500, ranking.length * 35 + 80);
+            // ALTURA REDUCIDA A UNA CUARTA PARTE: 9px por plantel + 80px base (mínimo 200px)
+            // Antes: 35px por plantel, ahora: 9px por plantel (aproximadamente 1/4)
+            const dynamicHeight = Math.max(200, ranking.length * 9 + 80);
             
-            // GRÁFICO DE BARRAS VERTICALES A ANCHO COMPLETO
+            // GRÁFICO DE BARRAS VERTICALES A ANCHO COMPLETO CON ALTURA REDUCIDA
             Plotly.newPlot('chart-ranking-planteles', [{
                 x: ranking.map(r => r.name),
                 y: ranking.map(r => r.avg),
@@ -495,14 +496,14 @@
                 text: ranking.map(r => r.avg.toFixed(1)),
                 textposition: 'outside',
                 textfont: {
-                    size: 10,
+                    size: 9,
                     color: '#111827'
                 },
                 hovertemplate: '<b>%{x}</b><br>Promedio: %{y:.2f}<extra></extra>'
             }], {
                 title: {
                     text: `📊 ${tituloGrafico} (Ordenado de menor a mayor)`,
-                    font: { size: 16, weight: 'bold' },
+                    font: { size: 14, weight: 'bold' },
                     x: 0.5,
                     xanchor: 'center'
                 },
@@ -511,38 +512,37 @@
                     tickangle: -45,
                     automargin: true,
                     tickfont: {
-                        size: 11,
-                        weight: 'bold'
+                        size: 9
                     },
-                    titlefont: { size: 12, weight: 'bold' }
+                    titlefont: { size: 10, weight: 'bold' }
                 },
                 yaxis: {
                     title: 'Promedio',
                     range: [0, 10.5],
                     dtick: 1,
                     gridcolor: '#e5e5e5',
-                    titlefont: { size: 12, weight: 'bold' }
+                    titlefont: { size: 10, weight: 'bold' }
                 },
                 height: dynamicHeight,
-                width: null,  // Ancho automático (ocupa todo el contenedor)
+                width: null,
                 margin: {
-                    t: 80,
-                    l: 80,
-                    r: 40,
-                    b: 180
+                    t: 60,
+                    l: 60,
+                    r: 30,
+                    b: 100
                 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 showlegend: false,
-                bargap: 0.15,
+                bargap: 0.2,
                 responsive: true
             });
             
-            // Ajustar el contenedor para que se redimensione correctamente
+            // Ajustar márgenes después de renderizar
             setTimeout(() => {
                 Plotly.relayout('chart-ranking-planteles', {
                     'xaxis.tickangle': -45,
-                    'margin.b': Math.max(150, ranking.length * 1.5)
+                    'margin.b': Math.max(80, ranking.length * 0.8)
                 });
             }, 100);
         };
