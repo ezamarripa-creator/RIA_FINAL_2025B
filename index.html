@@ -54,6 +54,7 @@
         .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(0,0,0,0.1); }
         .stat-card { border-left: 4px solid var(--tierra); }
         .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9); z-index: 999; align-items: center; justify-content: center; color: white; flex-direction: column; }
+        .full-width-chart { width: 100% !important; display: block; }
     </style>
 </head>
 <body class="min-h-screen pb-12">
@@ -136,14 +137,18 @@
             </div>
         </section>
 
-        <!-- Gráficos -->
+        <!-- Gráficos - El de ranking ahora ocupa todo el ancho -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <div class="glass p-4 rounded-2xl h-64" id="chart-genero"></div>
             <div class="glass p-4 rounded-2xl h-64" id="chart-turno"></div>
             <div class="glass p-4 rounded-2xl h-64" id="chart-tipo"></div>
             <div class="glass p-4 rounded-2xl h-72 md:col-span-2" id="chart-rangos-tres"></div>
             <div class="glass p-4 rounded-2xl h-72" id="chart-ponderados"></div>
-            <div class="glass p-4 rounded-2xl" id="chart-ranking-planteles" style="min-height: 500px; width: 100%;"></div>
+        </div>
+        
+        <!-- Contenedor del gráfico de ranking a ancho completo -->
+        <div class="glass p-4 rounded-2xl mb-6 shadow-sm border border-stone-200 w-full">
+            <div id="chart-ranking-planteles" style="width: 100%; min-height: 550px;"></div>
         </div>
 
         <!-- Tabla principal -->
@@ -180,7 +185,7 @@
         const GOOGLE_FILE_ID = '10SdlIRAa9Er4VzYrzbMd8vc_A0xCYCE5';
         const GOOGLE_DRIVE_EXPORT_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_FILE_ID}/export?format=xlsx`;
         
-        const DB_NAME = 'SemsRia_DriveV10_Completo';
+        const DB_NAME = 'SemsRia_DriveV11_Completo';
         const STORE_NAME = 'data';
         let db = null;
         let dataGlobal = [];
@@ -433,7 +438,7 @@
                  type:'bar', marker:{color:['#8b5cf6','#06b6d4','#f97316']}, text: [(proms.pu/count).toFixed(1), (proms.se/count).toFixed(1), (proms.pr/count).toFixed(1)], textposition:'auto'}
             ], {title:'Promedios Ponderados (General)', ...conf});
             
-            // RANKING DE PLANTELES - GRÁFICO DE BARRAS VERTICALES
+            // RANKING DE PLANTELES - GRÁFICO DE BARRAS VERTICALES A ANCHO COMPLETO
             const plantAvg = {};
             let tituloGrafico = '';
             
@@ -472,7 +477,10 @@
             
             const barColors = ranking.map(r => r.avg < 6 ? '#ef4444' : (r.avg < 7 ? '#f59e0b' : '#10b981'));
             
-            // GRÁFICO DE BARRAS VERTICALES (como solicitaste)
+            // Calcular altura dinámica según cantidad de planteles (más planteles = más altura)
+            const dynamicHeight = Math.max(500, ranking.length * 35 + 80);
+            
+            // GRÁFICO DE BARRAS VERTICALES A ANCHO COMPLETO
             Plotly.newPlot('chart-ranking-planteles', [{
                 x: ranking.map(r => r.name),
                 y: ranking.map(r => r.avg),
@@ -494,34 +502,49 @@
             }], {
                 title: {
                     text: `📊 ${tituloGrafico} (Ordenado de menor a mayor)`,
-                    x: 0.5
+                    font: { size: 16, weight: 'bold' },
+                    x: 0.5,
+                    xanchor: 'center'
                 },
                 xaxis: {
                     title: 'Planteles',
                     tickangle: -45,
                     automargin: true,
                     tickfont: {
-                        size: 10
-                    }
+                        size: 11,
+                        weight: 'bold'
+                    },
+                    titlefont: { size: 12, weight: 'bold' }
                 },
                 yaxis: {
                     title: 'Promedio',
                     range: [0, 10.5],
                     dtick: 1,
-                    gridcolor: '#e5e5e5'
+                    gridcolor: '#e5e5e5',
+                    titlefont: { size: 12, weight: 'bold' }
                 },
-                height: 480,
+                height: dynamicHeight,
+                width: null,  // Ancho automático (ocupa todo el contenedor)
                 margin: {
-                    t: 60,
-                    l: 60,
-                    r: 20,
+                    t: 80,
+                    l: 80,
+                    r: 40,
                     b: 180
                 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 showlegend: false,
-                bargap: 0.15
+                bargap: 0.15,
+                responsive: true
             });
+            
+            // Ajustar el contenedor para que se redimensione correctamente
+            setTimeout(() => {
+                Plotly.relayout('chart-ranking-planteles', {
+                    'xaxis.tickangle': -45,
+                    'margin.b': Math.max(150, ranking.length * 1.5)
+                });
+            }, 100);
         };
 
         const fillSelect = (id, vals) => {
