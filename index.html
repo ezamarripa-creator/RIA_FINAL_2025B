@@ -507,10 +507,61 @@
             const dynamicHeight = 420;
             
             Plotly.newPlot('chart-ranking-planteles', [{
-                y: ranking.map(r => r.name),
-                x: ranking.map(r => r.avg),
-                type: 'bar',
-                orientation: 'h',
+    x: ranking.map(r => r.name),
+    y: ranking.map(r => r.avg),
+    type: 'bar',
+    marker: {
+        color: barColors,
+        line: {
+            width: 0.5,
+            color: '#333'
+        }
+    },
+    text: ranking.map(r => r.avg.toFixed(1)),
+    textposition: 'outside',
+    textfont: {
+        size: 10,
+        color: '#111827'
+    },
+    hovertemplate:
+        '<b>%{x}</b><br>Promedio: %{y:.2f}<extra></extra>'
+}], {
+    title: {
+        text: `📊 ${tituloGrafico} (Ordenado de menor a mayor)`,
+        x: 0.5
+    },
+
+    xaxis: {
+        title: 'Planteles',
+        tickangle: -45,
+        automargin: true,
+        tickfont: {
+            size: 10
+        }
+    },
+
+    yaxis: {
+        title: 'Promedio',
+        range: [0,10.5],
+        dtick: 1,
+        gridcolor: '#e5e5e5'
+    },
+
+    height: 420,
+
+    margin: {
+        t: 60,
+        l: 60,
+        r: 20,
+        b: 180
+    },
+
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+
+    showlegend: false,
+    bargap: 0.15
+});
                 marker: { 
                     color: barColors,
                     line: { width: 0.5, color: '#333' }
