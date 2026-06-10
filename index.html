@@ -87,7 +87,7 @@
             <div class="glass p-5 rounded-2xl stat-card shadow-sm"><p class="text-[10px] font-bold text-stone-500 uppercase">Registros Totales</p><h2 id="stat-registros" class="text-3xl font-black text-slate-800">0</h2></div>
             <div class="glass p-5 rounded-2xl stat-card shadow-sm"><p class="text-[10px] font-bold text-stone-500 uppercase">Planteles</p><h2 id="stat-planteles" class="text-3xl font-black text-slate-800">0</h2></div>
             <div class="glass p-5 rounded-2xl stat-card shadow-sm"><p class="text-[10px] font-bold text-stone-500 uppercase">Promedio Gral (Final)</p><h2 id="stat-promedio" class="text-3xl font-black text-emerald-700">0.0</h2></div>
-            <div class="glass p-5 rounded-2xl stat-card shadow-sm border-l-4 border-red-500">
+            <div class="glass p-5 rounded-2xl shadow-sm border-l-4 border-red-500">
                 <p class="text-[10px] font-bold text-stone-500 uppercase">📘 PARCIAL 1 (&lt;6)</p>
                 <h2 id="stat-riesgo-p1" class="text-2xl font-black text-red-700">0%</h2>
                 <p id="stat-riesgo-p1-abs" class="text-[10px] font-semibold text-red-600">0 registros</p>
@@ -141,7 +141,7 @@
             <div class="glass p-4 rounded-2xl h-64" id="chart-tipo"></div>
             <div class="glass p-4 rounded-2xl h-72 md:col-span-2" id="chart-rangos-tres"></div>
             <div class="glass p-4 rounded-2xl h-72" id="chart-ponderados"></div>
-            <div class="glass p-4 rounded-2xl h-80 md:col-span-3" id="chart-ranking-planteles"></div>
+            <div class="glass p-4 rounded-2xl h-96 md:col-span-3" id="chart-ranking-planteles"></div>
         </div>
 
         <!-- Tabla principal con nuevas columnas -->
@@ -403,7 +403,7 @@
 
         const renderAllCharts = (items) => {
             if(!items.length) return;
-            const conf = { responsive: true, margin: { t: 40, l: 40, r: 20, b: 40 } };
+            const conf = { responsive: true, margin: { t: 40, l: 40, r: 20, b: 80 } };
             
             // Gráficos básicos
             const countBy = (f) => items.reduce((a,b)=>{ a[b[f]]=(a[b[f]]||0)+1; return a;}, {});
@@ -437,7 +437,7 @@
                  type:'bar', marker:{color:['#8b5cf6','#06b6d4','#f97316']}, text: [(proms.pu/count).toFixed(1), (proms.se/count).toFixed(1), (proms.pr/count).toFixed(1)], textposition:'auto'}
             ], {title:'Promedios Ponderados (General)', ...conf});
             
-            // Ranking de planteles por calificación final (de menor a mayor)
+            // Ranking de planteles por calificación final - BARRAS VERTICALES (de menor a mayor)
             const plantAvg = {};
             items.forEach(i => {
                 if(!plantAvg[i.Plantel]) plantAvg[i.Plantel] = {sum:0, cnt:0};
@@ -445,11 +445,34 @@
                 plantAvg[i.Plantel].cnt++;
             });
             const ranking = Object.keys(plantAvg).map(k => ({name: k, avg: plantAvg[k].sum/plantAvg[k].cnt})).sort((a,b) => a.avg - b.avg);
+            
+            // Colores según el promedio
+            const barColors = ranking.map(r => r.avg < 6 ? '#ef4444' : (r.avg < 7 ? '#f59e0b' : '#10b981'));
+            
             Plotly.newPlot('chart-ranking-planteles', [{
-                x: ranking.map(r => r.avg), y: ranking.map(r => r.name), type:'bar', orientation:'h',
-                marker: {color: ranking.map(r => r.avg<6?'#ef4444':r.avg<7?'#f59e0b':'#10b981')},
-                text: ranking.map(r => r.avg.toFixed(1)), textposition:'outside'
-            }], {title:'Planteles por Promedio Final (⬅️ Menor a Mayor ➡️)', xaxis:{title:'Promedio Final'}, height: Math.max(400, ranking.length*25), ...conf});
+                x: ranking.map(r => r.name),
+                y: ranking.map(r => r.avg),
+                type: 'bar',
+                marker: { color: barColors },
+                text: ranking.map(r => r.avg.toFixed(1)),
+                textposition: 'outside',
+                textfont: { size: 10 }
+            }], {
+                title: '📊 Planteles por Promedio Final (Ordenados de menor a mayor)',
+                xaxis: { 
+                    title: 'Plantel',
+                    tickangle: -45,
+                    tickfont: { size: 9 }
+                },
+                yaxis: { 
+                    title: 'Promedio Final',
+                    range: [0, 10],
+                    dtick: 1
+                },
+                height: Math.max(450, ranking.length * 35),
+                margin: { t: 60, l: 60, r: 30, b: 120 },
+                ...conf
+            });
         };
 
         const fillSelect = (id, vals) => {
