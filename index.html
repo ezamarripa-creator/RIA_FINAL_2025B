@@ -39,7 +39,7 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA SEMS - RIA Dashboard v9.0 | Parciales 1,2,3 y Final</title>
+    <title>SISTEMA SEMS - RIA Dashboard v10.0 | Parciales 1,2,3 y Final</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -117,13 +117,15 @@
                 <div><label class="block text-[9px] font-bold text-stone-400 mb-1">TURNO</label><select id="f-turno" onchange="applyFilters()" class="w-full bg-stone-50 border p-2 rounded-lg text-xs font-bold outline-none"></select></div>
                 <div><label class="block text-[9px] font-bold text-stone-400 mb-1">TIPO</label><select id="f-tipo" onchange="applyFilters()" class="w-full bg-stone-50 border p-2 rounded-lg text-xs font-bold outline-none"></select></div>
                 <div><label class="block text-[9px] font-bold text-stone-400 mb-1">GÉNERO</label><select id="f-sector" onchange="applyFilters()" class="w-full bg-stone-50 border p-2 rounded-lg text-xs font-bold outline-none"></select></div>
-                <div><label class="block text-[9px] font-bold text-stone-400 mb-1">PARCIAL</label>
-                    <select id="f-parcial" onchange="applyFilters()" class="w-full bg-stone-50 border p-2 rounded-lg text-xs font-bold outline-none">
-                        <option value="ALL">TODOS LOS CAMPOS</option>
-                        <option value="P1">SOLO PARCIAL 1</option>
-                        <option value="P2">SOLO PARCIAL 2</option>
-                        <option value="P3">SOLO PARCIAL 3</option>
-                        <option value="FINAL">SOLO FINAL</option>
+                <div><label class="block text-[9px] font-bold text-stone-400 mb-1">FILTRO PARCIAL</label>
+                    <select id="f-parcial" onchange="applyFilters()" class="w-full bg-amber-50 border-2 border-amber-300 p-2 rounded-lg text-xs font-bold outline-none">
+                        <option value="FINAL">⭐ PROMEDIO FINAL</option>
+                        <option value="P1">📘 PARCIAL 1</option>
+                        <option value="P2">📗 PARCIAL 2</option>
+                        <option value="P3">📙 PARCIAL 3</option>
+                        <option value="PROMUNI">⚖️ PROMEDIO UNIDADES</option>
+                        <option value="SEMESTRAL">📚 SEMESTRAL</option>
+                        <option value="PROYECTO">🎯 PROYECTO</option>
                     </select>
                 </div>
                 <div><label class="block text-[9px] font-bold text-stone-400 mb-1">RIESGO (Final)</label>
@@ -178,7 +180,7 @@
         const GOOGLE_FILE_ID = '10SdlIRAa9Er4VzYrzbMd8vc_A0xCYCE5';
         const GOOGLE_DRIVE_EXPORT_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_FILE_ID}/export?format=xlsx`;
         
-        const DB_NAME = 'SemsRia_DriveV9_Completo';
+        const DB_NAME = 'SemsRia_DriveV10_Completo';
         const STORE_NAME = 'data';
         let db = null;
         let dataGlobal = [];
@@ -358,7 +360,7 @@
         const renderTable = (items) => {
             const tbody = document.getElementById('tableBody');
             if (!items.length) {
-                tbody.innerHTML = '<tr><td colspan="14" class="text-center py-10">No hay registros</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="14" class="text-center py-10">No hay registros con los filtros seleccionados</td></td>';
                 return;
             }
             tbody.innerHTML = items.slice(0, 1200).map((d, i) => `
@@ -386,6 +388,8 @@
         
         const applyFilters = () => {
             const s = (id) => document.getElementById(id).value;
+            
+            // Aplicar filtros estándar (NO incluimos el filtro de parcial aquí porque solo afecta al gráfico)
             let baseFiltered = dataGlobal.filter(d => 
                 (s('f-plantel') === 'ALL' || d.Plantel === s('f-plantel')) &&
                 (s('f-semestre') === 'ALL' || String(d.Semestre) === s('f-semestre')) &&
@@ -395,13 +399,17 @@
                 (s('f-sector') === 'ALL' || d.Genero === s('f-sector')) &&
                 (s('f-semaforo') === 'ALL' || d.Semaforo === s('f-semaforo'))
             );
+            
             dataFiltered = baseFiltered;
             renderTable(dataFiltered);
             updateStats(dataFiltered);
-            renderAllCharts(dataFiltered);
+            
+            // Obtener el filtro de parcial seleccionado para el gráfico
+            const parcialFilter = s('f-parcial');
+            renderAllCharts(dataFiltered, parcialFilter);
         };
 
-        const renderAllCharts = (items) => {
+        const renderAllCharts = (items, parcialFilter = 'FINAL') => {
             if(!items.length) return;
             const conf = { responsive: true, margin: { t: 40, l: 40, r: 20, b: 40 } };
             
@@ -437,11 +445,41 @@
                  type:'bar', marker:{color:['#8b5cf6','#06b6d4','#f97316']}, text: [(proms.pu/count).toFixed(1), (proms.se/count).toFixed(1), (proms.pr/count).toFixed(1)], textposition:'auto'}
             ], {title:'Promedios Ponderados (General)', ...conf});
             
-            // RANKING DE PLANTELES - BARRAS HORIZONTALES MÁS CORTAS Y ANCHAS
+            // RANKING DE PLANTELES - Según el filtro de parcial seleccionado
             const plantAvg = {};
+            let tituloGrafico = '';
+            let unidadYAxis = 'Promedio';
+            
+            // Determinar qué métrica usar según el filtro
+            let getMetric = (item) => {
+                switch(parcialFilter) {
+                    case 'P1': return item.Cal1;
+                    case 'P2': return item.Cal2;
+                    case 'P3': return item.Cal3;
+                    case 'PROMUNI': return item.PromUni;
+                    case 'SEMESTRAL': return item.Semestral;
+                    case 'PROYECTO': return item.Proyecto;
+                    default: return item.Final;
+                }
+            };
+            
+            // Títulos según filtro
+            const titulosMap = {
+                'P1': '📘 PROMEDIO PARCIAL 1 POR PLANTEL',
+                'P2': '📗 PROMEDIO PARCIAL 2 POR PLANTEL',
+                'P3': '📙 PROMEDIO PARCIAL 3 POR PLANTEL',
+                'PROMUNI': '⚖️ PROMEDIO UNIDADES POR PLANTEL',
+                'SEMESTRAL': '📚 PROMEDIO SEMESTRAL POR PLANTEL',
+                'PROYECTO': '🎯 PROMEDIO PROYECTO POR PLANTEL',
+                'FINAL': '⭐ PROMEDIO FINAL POR PLANTEL'
+            };
+            tituloGrafico = titulosMap[parcialFilter] || '⭐ PROMEDIO FINAL POR PLANTEL';
+            
+            // Calcular promedios por plantel
             items.forEach(i => {
+                const metric = getMetric(i);
                 if(!plantAvg[i.Plantel]) plantAvg[i.Plantel] = {sum:0, cnt:0};
-                plantAvg[i.Plantel].sum += i.Final;
+                plantAvg[i.Plantel].sum += metric;
                 plantAvg[i.Plantel].cnt++;
             });
             
@@ -451,7 +489,7 @@
             // Colores según el promedio
             const barColors = ranking.map(r => r.avg < 6 ? '#ef4444' : (r.avg < 7 ? '#f59e0b' : '#10b981'));
             
-            // Calcular altura dinámica: 28px por plantel + 60px base (mínimo 400px)
+            // Calcular altura dinámica
             const dynamicHeight = Math.max(400, ranking.length * 28 + 60);
             
             Plotly.newPlot('chart-ranking-planteles', [{
@@ -466,18 +504,18 @@
                 text: ranking.map(r => r.avg.toFixed(1)),
                 textposition: 'outside',
                 textfont: { size: 9, weight: 'bold', color: '#1f2937' },
-                hovertemplate: '<b>%{y}</b><br>Promedio Final: %{x:.2f}<extra></extra>',
-                width: 0.6,  // Barras más delgadas/cortas
+                hovertemplate: '<b>%{y}</b><br>Promedio: %{x:.2f}<extra></extra>',
+                width: 0.6,
                 opacity: 0.9
             }], {
                 title: {
-                    text: '📊 PROMEDIO FINAL POR PLANTEL (Ordenado de menor a mayor)',
-                    font: { size: 15, weight: 'bold', color: '#0f172a' },
+                    text: `📊 ${tituloGrafico} (Ordenado de menor a mayor)`,
+                    font: { size: 14, weight: 'bold', color: '#0f172a' },
                     x: 0.5,
                     xanchor: 'center'
                 },
                 xaxis: { 
-                    title: 'Promedio Final',
+                    title: unidadYAxis,
                     range: [0, 10.5],
                     dtick: 1,
                     gridcolor: '#e5e5e5',
@@ -500,14 +538,15 @@
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 hovermode: 'closest',
                 showlegend: false,
-                bargap: 0.3  // Espacio entre barras para que se vean más cortas y separadas
+                bargap: 0.3
             });
         };
 
         const fillSelect = (id, vals) => {
             const select = document.getElementById(id);
             if(!select) return;
-            select.innerHTML = '<option value="ALL">TODOS</option>' + [...new Set(vals)].sort((a,b)=>String(a).localeCompare(String(b))).map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+            const uniqueVals = [...new Set(vals)].filter(v => v && v !== 'undefined').sort((a,b)=>String(a).localeCompare(String(b)));
+            select.innerHTML = '<option value="ALL">TODOS</option>' + uniqueVals.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
         };
 
         const setupFilters = () => {
@@ -521,11 +560,11 @@
         };
 
         function exportToExcel() {
-            if(!dataFiltered.length) return alert("No hay datos");
+            if(!dataFiltered.length) return alert("No hay datos para exportar");
             const exportData = dataFiltered.map(d => ({
                 Plantel: d.Plantel, Semestre: d.Semestre, Turno: d.Turno, Grupo: d.Grupo, Alumno: d.Alumno,
                 Materia: d.Materia, Docente: d.Docente, Parcial1: d.Cal1, Parcial2: d.Cal2, Parcial3: d.Cal3,
-                Promedio_Unidades: d.PromUni, Semestral: d.Semestral, Proyecto: d.Proyecto, Calificacion_Final: d.Final, Riesgo: d.Semaforo
+                Promedio_Unidades: d.PromUni, Semestral: d.Semestral, Proyecto: d.Proyecto, Calificacion_Final: d.Final, Riesgo: d.Semaforo, Genero: d.Genero
             }));
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
@@ -534,7 +573,7 @@
         }
 
         function exportToPDF() {
-            if(!dataFiltered.length) return alert("Sin datos");
+            if(!dataFiltered.length) return alert("Sin datos para exportar");
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
             doc.text(`REPORTE ACADÉMICO RIA - ID: ${GOOGLE_FILE_ID}`, 14, 15);
@@ -547,9 +586,14 @@
         }
 
         const clearDatabase = () => {
-            if (confirm("⚠️ Eliminar caché local?")) { indexedDB.deleteDatabase(DB_NAME); location.reload(); }
+            if (confirm("⚠️ Eliminar caché local? Esto recargará la página.")) { 
+                indexedDB.deleteDatabase(DB_NAME); 
+                localStorage.clear();
+                location.reload(); 
+            }
         };
 
+        // Inicialización
         window.onload = async () => {
             try {
                 await initDB();
@@ -558,11 +602,21 @@
                 const getAllReq = store.getAll();
                 getAllReq.onsuccess = (e) => {
                     const cached = e.target.result;
-                    if (cached?.length) { dataGlobal = cached; setupFilters(); applyFilters(); }
-                    else loadDataFromDrive();
+                    if (cached && cached.length > 0) { 
+                        console.log(`📀 Cargando caché local: ${cached.length} registros`);
+                        dataGlobal = cached; 
+                        setupFilters(); 
+                        applyFilters(); 
+                    } else { 
+                        console.log("🔄 Sin caché local, sincronizando con Google Drive...");
+                        loadDataFromDrive(); 
+                    }
                 };
                 getAllReq.onerror = () => loadDataFromDrive();
-            } catch(err) { loadDataFromDrive(); }
+            } catch(err) { 
+                console.error("Error en inicialización:", err);
+                loadDataFromDrive(); 
+            }
         };
     </script>
 </body>
