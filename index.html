@@ -437,7 +437,7 @@
                  type:'bar', marker:{color:['#8b5cf6','#06b6d4','#f97316']}, text: [(proms.pu/count).toFixed(1), (proms.se/count).toFixed(1), (proms.pr/count).toFixed(1)], textposition:'auto'}
             ], {title:'Promedios Ponderados (General)', ...conf});
             
-            // RANKING DE PLANTELES - BARRAS HORIZONTALES (de menor a mayor)
+            // RANKING DE PLANTELES - BARRAS VERTICALES (de menor a mayor)
             const plantAvg = {};
             items.forEach(i => {
                 if(!plantAvg[i.Plantel]) plantAvg[i.Plantel] = {sum:0, cnt:0};
@@ -451,42 +451,43 @@
             // Colores según el promedio
             const barColors = ranking.map(r => r.avg < 6 ? '#ef4444' : (r.avg < 7 ? '#f59e0b' : '#10b981'));
             
-            // Calcular altura dinámica: 35px por plantel + 100px base (mínimo 500px)
-            const dynamicHeight = Math.max(500, ranking.length * 35 + 100);
+            // Calcular altura dinámica: 40px por plantel + 100px base (mínimo 500px)
+            const dynamicHeight = Math.max(500, ranking.length * 40 + 100);
             
             Plotly.newPlot('chart-ranking-planteles', [{
-                y: ranking.map(r => r.name),
-                x: ranking.map(r => r.avg),
+                x: ranking.map(r => r.name),
+                y: ranking.map(r => r.avg),
                 type: 'bar',
-                orientation: 'h',  // HORIZONTAL (barras horizontales)
+                orientation: 'v',  // Vertical (barras verticales)
                 marker: { 
                     color: barColors,
                     line: { width: 1, color: '#333' }
                 },
                 text: ranking.map(r => r.avg.toFixed(1)),
                 textposition: 'outside',
-                textfont: { size: 10, weight: 'bold' },
-                hovertemplate: '<b>%{y}</b><br>Promedio: %{x:.2f}<extra></extra>'
+                textfont: { size: 11, weight: 'bold' },
+                hovertemplate: '<b>%{x}</b><br>Promedio: %{y:.2f}<extra></extra>'
             }], {
                 title: {
                     text: '📊 PROMEDIO FINAL POR PLANTEL (Ordenado de menor a mayor)',
                     font: { size: 16, weight: 'bold' }
                 },
                 xaxis: { 
+                    title: 'PLANTEL',
+                    tickangle: -45,
+                    tickfont: { size: 10 },
+                    automargin: true
+                },
+                yaxis: { 
                     title: 'Promedio Final',
                     range: [0, 10],
                     dtick: 1,
                     gridcolor: '#e5e5e5',
                     zerolinecolor: '#cccccc'
                 },
-                yaxis: { 
-                    title: 'PLANTEL',
-                    automargin: true,
-                    tickfont: { size: 10 }
-                },
                 height: dynamicHeight,
                 width: null,
-                margin: { t: 80, l: 150, r: 40, b: 40 },
+                margin: { t: 80, l: 60, r: 40, b: 120 },
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 hovermode: 'closest'
